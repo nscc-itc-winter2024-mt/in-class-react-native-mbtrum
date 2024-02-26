@@ -7,9 +7,14 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import base64 from 'react-native-base64';
 
 const Stack = createNativeStackNavigator();
+const host = 'https://nscc-0304263-wordpress-photos.azurewebsites.net';
+const username = 'W0304263';
+const password = 'XQf1 7zMp zKhk SeVR Dfba aKO7';
 
 function HomeScreen ( { navigation }) {
-  const [imageUri, setImage] = useState(null)
+  const [imageUri, setImage] = useState(null);
+  const [title, setTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Function to pick the image on phone using expo-image-picker
   const pickImage = async() => {
@@ -28,14 +33,99 @@ function HomeScreen ( { navigation }) {
     }
   }
 
+  // Api Step 1. Upload featured image to Wordpress
+  const uploadPhoto = async () => {
+    const endPoint = host + '/wp-json/wp/v2/media';
+    const fileName = imageUri.split('/').pop();
+    const formData = new FormData();
+
+    formData.append('file', { 
+      uri: imageUri,
+      name: fileName
+    });
+
+    const result = await fetch(endPoint, {
+      method: 'POST',
+      headers: {        
+        'Content-disposition': 'formdata; filename=' + fileName,
+        'Authorization': 'Basic ' + base64.encode(username + ':' + password)
+      },
+      body: formData
+    });
+
+    const response = await result.json();
+    const mediaId = response.id;
+
+    return mediaId;
+  }
+
+  // Api Step 2. Upload new post to Wordpress
+  const submitPost = async () => {
+
+    // Validate inputs
+    if(!title || !imageUri){
+      alert('Please enter a value for all inputs.');
+    }
+    {
+      setIsLoading(true);
+
+      // Upload photo and get media id
+      const mediaId = await uploadPhoto();
+      console.log('Uploaded Media Id: ' + mediaId);
+
+      // Create Post Api
+      const endPoint = host + '/wp-json/wp/v2/posts';
+      
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('status', 'publish');
+      formData.append('featured_media', mediaId);
+
+      // Create the post
+      const result = await fetch(endPoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + base64.encode(username + ':' + password)
+        },
+        body: formData
+      });
+
+      const response = await result.json();
+
+      if(response.id) {
+        alert('Successfully created Post. ID: ' + response.id);        
+      }
+      else {
+        alert('Oops, something went wrong.');
+      }
+
+      setIsLoading(false);
+    }
+
+  }
+
   return (
     <ScrollView>
       <View style={styles.container}>
+
+      <TextInput 
+          style={ styles.input } 
+          placeholder="Title"
+          onChangeText={ text => setTitle(text) } 
+          defaultValue= { title } />
+
         <Pressable onPress={ pickImage } style={styles.button}>
           <Text style={styles.buttonText}>Choose Image</Text>
         </Pressable>
 
         { imageUri && <Image source={{ uri: imageUri }} style={ styles.image } /> }
+
+        <Pressable onPress={ submitPost } style={styles.button}>
+          <Text style={styles.buttonText}>Submit</Text>
+        </Pressable>
+
+        { isLoading && <ActivityIndicator /> }
+
       </View>
     </ScrollView>
   );
@@ -45,7 +135,7 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name='Home' component={ HomeScreen } option={{ title: 'Add New Photo' }} />
+        <Stack.Screen name='Resplash - Add New Photo' component={ HomeScreen } option={{ title: 'Add New Photo' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -77,5 +167,12 @@ const styles = StyleSheet.create({
     width: 250,
     height: 250,
     resizeMode: 'cover'
+  },
+  input: {
+    height: 40,
+    marginBottom: 10,
+    borderWidth: 1,
+    padding: 10,
+    width: 300,
   }
 });
