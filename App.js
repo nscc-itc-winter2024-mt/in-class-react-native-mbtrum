@@ -9,10 +9,10 @@ import base64 from 'react-native-base64';
 const Stack = createNativeStackNavigator();
 const host = 'https://nscc-0304263-wordpress-photos.azurewebsites.net';
 const username = 'W0304263';
-const password = 'XQf1 7zMp zKhk SeVR Dfba aKO7';
+const password = 'OrEQ 4Bw8 YfWL NlCt RDqi k2rH';
 
 function HomeScreen ( { navigation }) {
-  const [imageUri, setImage] = useState(null);
+  const [image, setImage] = useState(null);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -27,20 +27,22 @@ function HomeScreen ( { navigation }) {
     });
 
     if(!result.canceled) {
-      const uri = result.assets[0].uri;
+      const img = result.assets[0];
 
-      setImage(uri);
+      setImage(img);
     }
   }
 
   // Api Step 1. Upload featured image to Wordpress
   const uploadPhoto = async () => {
     const endPoint = host + '/wp-json/wp/v2/media';
-    const fileName = imageUri.split('/').pop();
+    const fileName = image.uri.split('/').pop();
     const formData = new FormData();
+    const fileType = image.type || 'image/jpeg';
 
     formData.append('file', { 
-      uri: imageUri,
+      uri: image.uri,
+      type: fileType,
       name: fileName
     });
 
@@ -67,19 +69,21 @@ function HomeScreen ( { navigation }) {
       alert('Please enter a value for all inputs.');
     }
     {
-      setIsLoading(true);
+      console.log('Begin Post Submit');
+
+      setIsLoading(true);      
 
       // Upload photo and get media id
-      const mediaId = await uploadPhoto();
-      console.log('Uploaded Media Id: ' + mediaId);
-
+      //const mediaId = await uploadPhoto();
+      //console.log();
+      //alert('Uploaded Media Id: ' + mediaId);
       // Create Post Api
       const endPoint = host + '/wp-json/wp/v2/posts';
       
       const formData = new FormData();
       formData.append('title', title);
       formData.append('status', 'publish');
-      formData.append('featured_media', mediaId);
+      //formData.append('featured_media', mediaId);
 
       // Create the post
       const result = await fetch(endPoint, {
@@ -98,7 +102,7 @@ function HomeScreen ( { navigation }) {
       else {
         alert('Oops, something went wrong.');
       }
-
+      
       setIsLoading(false);
     }
 
@@ -118,7 +122,7 @@ function HomeScreen ( { navigation }) {
           <Text style={styles.buttonText}>Choose Image</Text>
         </Pressable>
 
-        { imageUri && <Image source={{ uri: imageUri }} style={ styles.image } /> }
+        { image && <Image source={{ uri: image.uri }} style={ styles.image } /> }
 
         <Pressable onPress={ submitPost } style={styles.button}>
           <Text style={styles.buttonText}>Submit</Text>
