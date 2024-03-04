@@ -12,6 +12,42 @@ const username = 'W0304263';
 const password = 'OrEQ 4Bw8 YfWL NlCt RDqi k2rH';
 
 function HomeScreen ( { navigation }) {
+
+  // URL for Posts
+  const url = host + "/wp-json/wp/v2/posts?_fields=id,title,_links&_embed=author,wp:featuredmedia";
+
+  const [posts, setPosts] = useState([]);
+
+  const getPosts = async () => {
+    const result = await fetch(url);
+    const data = await result.json();
+    setPosts(data);
+  }
+
+  if(posts.length === 0) {
+    getPosts();
+  }
+
+  return (
+    <View style={ styles.container}>
+      <Pressable onPress={ () => navigation.navigate('Create') } style={styles.button}>
+        <Text style={styles.buttonText}>Add New Photo</Text>
+      </Pressable>
+
+      <ScrollView style={ marginTop=10 }>
+          { posts.map( post => (
+            <View key={post.id} style={marginTop=10}>      
+              {post._embedded['wp:featuredmedia'] && <Image source={{ uri: host + post._embedded['wp:featuredmedia'][0].source_url }} style={{ width:300, height: 300 }}></Image> }
+              <Text>{ post.title.rendered }</Text>
+            </View>  
+          ))}            
+      </ScrollView>
+
+    </View>
+  )
+}
+
+function CreateScreen( { navigation }) {
   const [image, setImage] = useState(null);
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +133,7 @@ function HomeScreen ( { navigation }) {
       const response = await result.json();
 
       if(response.id) {
-        alert('Successfully created Post. ID: ' + response.id);        
+        navigation.navigate('Home');
       }
       else {
         alert('Oops, something went wrong.');
@@ -139,7 +175,8 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        <Stack.Screen name='Resplash - Add New Photo' component={ HomeScreen } option={{ title: 'Add New Photo' }} />
+        <Stack.Screen name='Home' component={ HomeScreen } option={{ title: 'Replash' }} />
+        <Stack.Screen name='Create' component={ CreateScreen } option={{ title: 'New Photo' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
